@@ -29,6 +29,7 @@ apps/api: fastify-openapi-glue строит   ┘          apps/web: SDK createA
 - Обработчики — `apps/api/src/handlers.ts`; имя метода = `operationId` из OpenAPI (например, `Health_check`).
 - Web ходит в API только через SDK по `/api/*`; в dev Vite проксирует на :3000.
 - Дымовой тест `apps/api/test/smoke.test.ts` поднимает сервер и вызывает его через SDK.
+- Термины `GLOSSARY.md` в коде и контракте называются по-английски: Тип встречи — `EventType`, Слот — `Slot`, Запись — `Booking`, Гость — поля `guest*`, Конфликт — ответ 409 `time_conflict`; Доступность и Горизонт записи — константы в `apps/api/src/schedule.ts`. Это имена кода, а не синонимы из списков _Avoid_: в текстах интерфейса и в обсуждении — только русские термины глоссария.
 
 ## Правила
 
