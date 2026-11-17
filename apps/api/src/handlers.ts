@@ -1,6 +1,7 @@
 import type { components } from "@calls-booking/contract";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { ApiProblem, validationProblem } from "./errors.ts";
+import { freeSlots, type Slot } from "./schedule.ts";
 import type { EventType, Store } from "./store.ts";
 
 type HealthStatus = components["schemas"]["HealthStatus"];
@@ -16,7 +17,15 @@ export interface HandlerDependencies {
 
 // Method names must match operationId values in the OpenAPI contract.
 // Request shapes are already checked against the OpenAPI schema; handlers add the remaining rules.
-export function createHandlers({ store }: HandlerDependencies) {
+export function createHandlers({ store, now }: HandlerDependencies) {
+  const findEventType = (slug: string): EventType => {
+    const eventType = store.getEventType(slug);
+    if (!eventType) {
+      throw new ApiProblem(404, { code: "not_found", message: "Такой тип встречи не найден" });
+    }
+    return eventType;
+  };
+
   return {
     async Health_check(): Promise<HealthStatus> {
       return { status: "ok" };
@@ -38,6 +47,19 @@ export function createHandlers({ store }: HandlerDependencies) {
 
       reply.code(201);
       return eventType;
+    },
+
+    async EventTypes_get(
+      request: FastifyRequest<{ Params: { slug: string } }>,
+    ): Promise<EventType> {
+      return findEventType(request.params.slug);
+    },
+
+    async EventTypes_listSlots(
+      request: FastifyRequest<{ Params: { slug: string } }>,
+    ): Promise<Slot[]> {
+      const { durationMinutes } = findEventType(request.params.slug);
+      return freeSlots({ now: now(), durationMinutes });
     },
   };
 }

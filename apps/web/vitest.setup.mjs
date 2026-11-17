@@ -2,6 +2,10 @@
 import "@testing-library/jest-dom/vitest";
 import { vi } from "vitest";
 
+// Guests see time in their browser's zone; tests fix it so they pass on any machine.
+// Asia/Yekaterinburg (UTC+5) differs from the owner's Europe/Moscow on purpose.
+process.env.TZ = "Asia/Yekaterinburg";
+
 const { getComputedStyle } = window;
 window.getComputedStyle = (elt) => getComputedStyle(elt);
 window.HTMLElement.prototype.scrollIntoView = () => {};

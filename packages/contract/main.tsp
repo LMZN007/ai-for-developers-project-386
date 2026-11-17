@@ -41,6 +41,12 @@ model NewEventType {
   durationMinutes: int32;
 }
 
+/** A free interval a guest can book; times are UTC (ISO 8601 with `Z`). */
+model Slot {
+  startsAt: utcDateTime;
+  endsAt: utcDateTime;
+}
+
 model FieldError {
   /** Name of the request field the message is about. */
   field: string;
@@ -91,6 +97,35 @@ namespace EventTypes {
       }
     | {
         @statusCode statusCode: 409;
+        @body body: ApiError;
+      };
+
+  /** One event type by its slug. */
+  @get
+  @route("/{slug}")
+  op get(@path slug: string):
+    | {
+        @statusCode statusCode: 200;
+        @body body: EventType;
+      }
+    | {
+        @statusCode statusCode: 404;
+        @body body: ApiError;
+      };
+
+  /**
+   * Free slots of the event type over the whole booking horizon (14 days from today
+   * in the owner's time zone), starting after the current moment, in ascending order.
+   */
+  @get
+  @route("/{slug}/slots")
+  op listSlots(@path slug: string):
+    | {
+        @statusCode statusCode: 200;
+        @body body: Slot[];
+      }
+    | {
+        @statusCode statusCode: 404;
         @body body: ApiError;
       };
 }
