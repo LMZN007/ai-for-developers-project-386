@@ -242,3 +242,12 @@ test("длина имени гостя считается после обрез�
     { field: "guestName", message: "Не длиннее 100 символов" },
   ]);
 });
+
+test("имя гостя числом не приводится к строке и отклоняется", async () => {
+  await start();
+
+  const { status, body } = await book("short", { ...guest, startsAt: AT_10_00, guestName: 42 });
+
+  expect(status).toBe(400);
+  expect(body.fields).toEqual([{ field: "guestName", message: "Некорректное значение" }]);
+});

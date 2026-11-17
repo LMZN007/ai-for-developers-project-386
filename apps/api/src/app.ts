@@ -21,7 +21,12 @@ export function buildApp({
   fastify = {},
 }: AppOptions = {}) {
   // allErrors: report every invalid field at once, so a form can mark all of them.
-  const app = Fastify({ ajv: { customOptions: { allErrors: true } }, ...fastify });
+  // coerceTypes off: a value of the wrong JSON type ("30" for a number) is an error, as the
+  // contract says, not something to convert. Path parameters are strings, so nothing needs it.
+  const app = Fastify({
+    ajv: { customOptions: { allErrors: true, coerceTypes: false } },
+    ...fastify,
+  });
   // The contract only describes JSON bodies, and the schema only validates parsed JSON: a plain-text
   // body would reach a handler unchecked. Without this parser such a request is rejected up front.
   app.removeContentTypeParser("text/plain");

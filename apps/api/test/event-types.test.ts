@@ -214,3 +214,12 @@ test("название длиннее 100 символов после обрез
   expect(status).toBe(400);
   expect(body.fields).toEqual([{ field: "title", message: "Не длиннее 100 символов" }]);
 });
+
+test("длительность строкой («30») не приводится к числу и отклоняется", async () => {
+  server = await startServer();
+
+  const { status, body } = await postEventType({ ...validNewEventType, durationMinutes: "30" });
+
+  expect(status).toBe(400);
+  expect(body.fields).toEqual([{ field: "durationMinutes", message: "Некорректное значение" }]);
+});
