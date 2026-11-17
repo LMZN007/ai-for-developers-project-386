@@ -8,13 +8,9 @@ const apiTarget = `http://127.0.0.1:${process.env.API_PORT ?? 3000}`;
 export default defineConfig({
   plugins: [react()],
   server: {
-    // The frontend calls /api/*; in dev Vite forwards it to the Fastify server.
+    // The frontend calls /api/*; in dev Vite forwards it to the Fastify server, which answers there too.
     proxy: {
-      "/api": {
-        target: apiTarget,
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ""),
-      },
+      "/api": { target: apiTarget, changeOrigin: true },
     },
   },
   // https://mantine.dev/guides/vitest/

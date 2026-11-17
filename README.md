@@ -99,7 +99,9 @@ mise install
 mise run dev
 ```
 
-Откройте http://localhost:5173. Проверить API напрямую: `curl http://localhost:3000/health`.
+Откройте http://localhost:5173. Проверить API напрямую: `curl http://localhost:3000/api/health`.
+
+Запустить как в продакшене, без Vite: `mise run start` — собирает фронтенд, и один сервер на порту `PORT` (по умолчанию 3000) отдаёт и API (`/api/*`), и страницы. Так же приложение работает в Docker-образе.
 
 Управление фоновыми серверами:
 

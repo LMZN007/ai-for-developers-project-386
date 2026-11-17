@@ -3,11 +3,14 @@ import { expect, test } from "@playwright/test";
 // The whole path from README: the owner creates an event type → a guest books a slot →
 // the owner sees the booking → the slot is no longer offered. Real server, real browser,
 // real clock: the guest takes the first free slot, which always exists within 14 days.
+// Names are unique per run, so the scenario can also run again against a deployed service
+// whose data survives between runs (E2E_BASE_URL).
 test("владелец создаёт тип встречи, гость записывается, владелец видит запись", async ({
   page,
 }) => {
-  const title = "Созвон из браузерного теста";
-  const slug = "e2e-call";
+  const runId = Date.now().toString(36);
+  const title = `Созвон из браузерного теста ${runId}`;
+  const slug = `e2e-${runId}`;
 
   await test.step("владелец создаёт тип встречи", async () => {
     await page.goto("/");
@@ -25,7 +28,11 @@ test("владелец создаёт тип встречи, гость запи
     await expect(page.getByRole("article", { name: title })).toContainText(`/book/${slug}`);
   });
 
-  const guest = { name: "Иван Петров", email: "ivan@example.com", comment: "Обсудим проект" };
+  const guest = {
+    name: "Иван Петров",
+    email: `ivan.${runId}@example.com`,
+    comment: "Обсудим проект",
+  };
   let day = "";
   let time = "";
 
@@ -59,11 +66,11 @@ test("владелец создаёт тип встречи, гость запи
     await page.getByRole("banner").getByRole("link", { name: "Для владельца" }).click();
     await page.getByRole("tab", { name: "Записи" }).click();
 
-    const row = page.getByRole("row").filter({ hasText: guest.name });
+    const row = page.getByRole("row").filter({ hasText: guest.email });
     await expect(row).toHaveCount(1);
     await expect(row).toContainText(`${day}, ${time}–`);
     await expect(row).toContainText(title);
-    await expect(row).toContainText(guest.email);
+    await expect(row).toContainText(guest.name);
     await expect(row).toContainText(guest.comment);
   });
 
@@ -85,5 +92,24 @@ test("владелец создаёт тип встречи, гость запи
     } else {
       await expect(bookedDay).toBeDisabled();
     }
+  });
+
+  await test.step("повторная запись на то же время напрямую через API отклоняется", async () => {
+    // Any client, not only this page: the rule lives on the server.
+    const bookings = await page.request.get("/api/bookings");
+    const booked = ((await bookings.json()) as { startsAt: string; guestEmail: string }[]).find(
+      (booking) => booking.guestEmail === guest.email,
+    );
+    expect(booked).toBeDefined();
+
+    const again = await page.request.post(`/api/event-types/${slug}/bookings`, {
+      data: { startsAt: booked?.startsAt, guestName: "Анна", guestEmail: "anna@example.com" },
+    });
+
+    expect(again.status()).toBe(409);
+    expect(await again.json()).toEqual({
+      code: "time_conflict",
+      message: "Это время уже заняли. Выберите другое время.",
+    });
   });
 });

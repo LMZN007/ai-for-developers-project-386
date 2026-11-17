@@ -25,8 +25,16 @@ export function validationProblem(fields: FieldError[]) {
 }
 
 // Every error leaves the server in the single contract format `{ code, message, fields? }`.
-export function registerErrorHandlers(app: FastifyInstance) {
-  app.setNotFoundHandler((_request, reply) => {
+// With `pagesFallback` (the server also serves the built web app), an unknown page address such as
+// `/book/consultation` gets index.html, and React Router shows the page or its own «не найдено».
+export function registerErrorHandlers(
+  app: FastifyInstance,
+  { pagesFallback = false }: { pagesFallback?: boolean } = {},
+) {
+  app.setNotFoundHandler((request, reply) => {
+    if (pagesFallback && isPageAddress(request.method, request.url)) {
+      return reply.type("text/html").sendFile("index.html");
+    }
     const body: ApiError = { code: "not_found", message: "Ресурс не найден" };
     return reply.code(404).send(body);
   });
@@ -101,4 +109,13 @@ function russianMessage(issue: FastifySchemaValidationError): string {
     default:
       return "Некорректное значение";
   }
+}
+
+/** A browser navigation to a page: a GET outside the API that does not ask for a file (`.js`). */
+function isPageAddress(method: string, url: string): boolean {
+  const path = url.split("?")[0] ?? "";
+  const lastSegment = path.split("/").at(-1) ?? "";
+  return (
+    method === "GET" && path !== "/api" && !path.startsWith("/api/") && !lastSegment.includes(".")
+  );
 }
