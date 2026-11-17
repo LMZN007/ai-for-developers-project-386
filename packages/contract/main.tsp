@@ -47,6 +47,41 @@ model Slot {
   endsAt: utcDateTime;
 }
 
+/** What a guest sends to book a slot; the server computes the end from the event type. */
+model NewBooking {
+  /** Must be the start of a free slot (see `listSlots`). */
+  startsAt: utcDateTime;
+
+  @minLength(1)
+  @maxLength(100)
+  guestName: string;
+
+  @format("email")
+  @maxLength(254)
+  guestEmail: string;
+
+  @maxLength(1000)
+  comment?: string;
+}
+
+/** The event type a booking belongs to, as shown next to the booking. */
+model BookingEventType {
+  slug: string;
+  title: string;
+  durationMinutes: int32;
+}
+
+/** A guest's booking of a slot; it occupies `[startsAt, endsAt)`. */
+model Booking {
+  id: string;
+  eventType: BookingEventType;
+  startsAt: utcDateTime;
+  endsAt: utcDateTime;
+  guestName: string;
+  guestEmail: string;
+  comment?: string;
+}
+
 model FieldError {
   /** Name of the request field the message is about. */
   field: string;
@@ -126,6 +161,30 @@ namespace EventTypes {
       }
     | {
         @statusCode statusCode: 404;
+        @body body: ApiError;
+      };
+
+  /**
+   * Book a free slot. Answers 409 `time_conflict` when the time overlaps any existing
+   * booking of any event type; of simultaneous requests for the same time exactly one wins.
+   */
+  @post
+  @route("/{slug}/bookings")
+  op createBooking(@path slug: string, @body body: NewBooking):
+    | {
+        @statusCode statusCode: 201;
+        @body body: Booking;
+      }
+    | {
+        @statusCode statusCode: 400;
+        @body body: ApiError;
+      }
+    | {
+        @statusCode statusCode: 404;
+        @body body: ApiError;
+      }
+    | {
+        @statusCode statusCode: 409;
         @body body: ApiError;
       };
 }

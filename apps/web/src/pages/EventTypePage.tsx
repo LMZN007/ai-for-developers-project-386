@@ -1,15 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { components } from "@calls-booking/contract";
-import { Anchor, Button, Group, Loader, SimpleGrid, Stack, Text, Title } from "@mantine/core";
-import { DatePicker, DatesProvider } from "@mantine/dates";
-import "dayjs/locale/ru";
+import { Alert, Anchor, Loader, Text, Title } from "@mantine/core";
 import { Link, useParams } from "react-router";
 import { api } from "../api.ts";
-import { browserTimeZone, dayTitle, localDateKey, localTime } from "../browserTime.ts";
+import { browserTimeZone } from "../browserTime.ts";
 import LoadFailed from "../LoadFailed.tsx";
+import BookingConfirmation from "./booking/BookingConfirmation.tsx";
+import BookingForm from "./booking/BookingForm.tsx";
+import { emptyGuest, type GuestValues } from "./booking/guestRules.ts";
+import SlotPicker from "./booking/SlotPicker.tsx";
 
 type EventType = components["schemas"]["EventType"];
 type Slot = components["schemas"]["Slot"];
+type Booking = components["schemas"]["Booking"];
 
 type PageState =
   | { status: "loading" }
@@ -17,9 +20,12 @@ type PageState =
   | { status: "failed" }
   | { status: "loaded"; eventType: EventType; slots: Slot[] };
 
+// The guest's way through the page; the confirmation has no address of its own (spec).
+type Step = { kind: "choose" } | { kind: "form"; slot: Slot } | { kind: "done"; booking: Booking };
+
 export default function EventTypePage() {
   const { slug = "" } = useParams();
-  const { state, retry } = useEventTypeWithSlots(slug);
+  const { state, retry, reloadSlots } = useEventTypeWithSlots(slug);
 
   if (state.status === "loading") {
     return <Loader mt="xl" aria-label="Загрузка" />;
@@ -50,74 +56,74 @@ export default function EventTypePage() {
         Время указано в поясе: {browserTimeZone()}
       </Text>
 
-      {slots.length === 0 ? (
-        <Text mt="xl">Свободного времени в ближайшие 14 дней нет</Text>
-      ) : (
-        <SlotPicker slots={slots} />
-      )}
+      <BookingSteps eventType={eventType} slots={slots} reloadSlots={reloadSlots} />
     </>
   );
 }
 
-function SlotPicker({ slots }: { slots: Slot[] }) {
-  const slotsByDate = useMemo(() => groupByLocalDate(slots), [slots]);
-  const dates = [...slotsByDate.keys()];
-  const firstDate = dates[0] ?? null;
-  const [chosenDate, setChosenDate] = useState<string | null>(null);
-  const [chosenSlot, setChosenSlot] = useState<string | null>(null);
-  const selectedDate = chosenDate ?? firstDate;
-  const daySlots = (selectedDate && slotsByDate.get(selectedDate)) || [];
+function BookingSteps({
+  eventType,
+  slots,
+  reloadSlots,
+}: {
+  eventType: EventType;
+  slots: Slot[];
+  reloadSlots: () => void;
+}) {
+  const [step, setStep] = useState<Step>({ kind: "choose" });
+  const [date, setDate] = useState<string | null>(null);
+  const [guest, setGuest] = useState<GuestValues>(emptyGuest);
+  const [conflict, setConflict] = useState(false);
+
+  if (step.kind === "done") {
+    return (
+      <BookingConfirmation
+        booking={step.booking}
+        onBookAgain={() => {
+          setGuest({ ...guest, comment: "" });
+          setStep({ kind: "choose" });
+        }}
+      />
+    );
+  }
+
+  if (step.kind === "form") {
+    return (
+      <BookingForm
+        eventType={eventType}
+        slot={step.slot}
+        values={guest}
+        onChange={setGuest}
+        onBack={() => setStep({ kind: "choose" })}
+        onBooked={(booking) => {
+          reloadSlots();
+          setStep({ kind: "done", booking });
+        }}
+        onConflict={() => {
+          reloadSlots();
+          setConflict(true);
+          setStep({ kind: "choose" });
+        }}
+      />
+    );
+  }
 
   return (
-    <SimpleGrid cols={{ base: 1, sm: 2 }} mt="md" spacing="xl">
-      <DatesProvider settings={{ locale: "ru", firstDayOfWeek: 1 }}>
-        <DatePicker
-          value={selectedDate}
-          onChange={(date) => {
-            if (date) {
-              setChosenDate(date);
-              setChosenSlot(null);
-            }
-          }}
-          defaultDate={firstDate ?? undefined}
-          minDate={firstDate ?? undefined}
-          maxDate={dates.at(-1)}
-          excludeDate={(date) => !slotsByDate.has(date)}
-          getDayProps={(date) => ({ "aria-label": dayTitle(date) })}
-        />
-      </DatesProvider>
-
-      {selectedDate && (
-        <Stack gap="sm">
-          <Title order={2} size="h4">
-            {dayTitle(selectedDate)}
-          </Title>
-          <Group gap="xs">
-            {daySlots.map((slot) => (
-              <Button
-                key={slot.startsAt}
-                variant={chosenSlot === slot.startsAt ? "filled" : "default"}
-                aria-pressed={chosenSlot === slot.startsAt}
-                onClick={() => setChosenSlot(slot.startsAt)}
-              >
-                {localTime(slot.startsAt)}
-              </Button>
-            ))}
-          </Group>
-        </Stack>
+    <>
+      {conflict && (
+        <Alert color="orange" mt="lg" title="Это время уже заняли. Выберите другое время." />
       )}
-    </SimpleGrid>
+      <SlotPicker
+        slots={slots}
+        date={date}
+        onDateChange={setDate}
+        onPick={(slot) => {
+          setConflict(false);
+          setStep({ kind: "form", slot });
+        }}
+      />
+    </>
   );
-}
-
-/** Slots grouped by the guest's local date, both in ascending order. */
-function groupByLocalDate(slots: Slot[]): Map<string, Slot[]> {
-  const groups = new Map<string, Slot[]>();
-  for (const slot of slots) {
-    const key = localDateKey(slot.startsAt);
-    groups.set(key, [...(groups.get(key) ?? []), slot]);
-  }
-  return groups;
 }
 
 function useEventTypeWithSlots(slug: string) {
@@ -160,5 +166,19 @@ function useEventTypeWithSlots(slug: string) {
     setAttempt((value) => value + 1);
   };
 
-  return { state, retry };
+  // Refreshes the slots in place, without a loading screen; on failure the old slots stay.
+  const reloadSlots = useCallback(() => {
+    api.GET("/event-types/{slug}/slots", { params: { path: { slug } } }).then(
+      ({ data }) => {
+        if (data) {
+          setState((current) =>
+            current.status === "loaded" ? { ...current, slots: data } : current,
+          );
+        }
+      },
+      () => {},
+    );
+  }, [slug]);
+
+  return { state, retry, reloadSlots };
 }

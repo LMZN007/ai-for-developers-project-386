@@ -31,3 +31,17 @@ export function dayTitle(dateKey: string): string {
   }).format(new Date(Date.UTC(year, month - 1, day)));
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
+
+/** "Среда, 25 ноября, 11:00–11:30" (with the year when asked) in the browser's zone. */
+export function slotLabel(slot: { startsAt: string; endsAt: string }, withYear = false): string {
+  const date = new Intl.DateTimeFormat("ru-RU", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    ...(withYear ? { year: "numeric" } : {}),
+  })
+    .format(new Date(slot.startsAt))
+    .replace(/ г\.$/, "");
+  const text = `${date}, ${localTime(slot.startsAt)}–${localTime(slot.endsAt)}`;
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}

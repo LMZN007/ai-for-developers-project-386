@@ -1,4 +1,5 @@
 import type { components } from "@calls-booking/contract";
+import { overlaps, type Interval } from "./intervals.ts";
 
 export type Slot = components["schemas"]["Slot"];
 
@@ -20,17 +21,34 @@ interface CalendarDate {
   day: number;
 }
 
-/**
- * Free slots of an event type: on working days within the booking horizon, fully inside
- * working hours, on the start grid, and starting after `now`; in ascending order.
- */
-export function freeSlots({
-  now,
-  durationMinutes,
-}: {
+interface SlotQuery {
   now: Date;
   durationMinutes: number;
-}): Slot[] {
+  /** Bookings of every event type; slots overlapping them are not free. */
+  busy?: Interval[];
+}
+
+/**
+ * Free slots of an event type: on working days within the booking horizon, fully inside
+ * working hours, on the start grid, starting after `now` and not overlapping `busy`;
+ * in ascending order.
+ */
+export function freeSlots({ now, durationMinutes, busy = [] }: SlotQuery): Slot[] {
+  return scheduledSlots(now, durationMinutes).filter(
+    (slot) => !busy.some((booking) => overlaps(slot, booking)),
+  );
+}
+
+/**
+ * Whether `startsAt` is the start of a slot by the time rules alone (grid, hours, horizon,
+ * not started); whether it is still free is the store's decision.
+ */
+export function isScheduledStart(now: Date, durationMinutes: number, startsAt: Date): boolean {
+  const start = formatInstant(startsAt);
+  return scheduledSlots(now, durationMinutes).some((slot) => slot.startsAt === start);
+}
+
+function scheduledSlots(now: Date, durationMinutes: number): Slot[] {
   const today = calendarDateIn(now, OWNER_TIME_ZONE);
   const slots: Slot[] = [];
 

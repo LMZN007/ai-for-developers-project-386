@@ -1,11 +1,14 @@
+import { randomUUID } from "node:crypto";
 import type { components } from "@calls-booking/contract";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { ApiProblem, validationProblem } from "./errors.ts";
-import { freeSlots, type Slot } from "./schedule.ts";
-import type { EventType, Store } from "./store.ts";
+import { formatInstant, freeSlots, isScheduledStart, type Slot } from "./schedule.ts";
+import type { Booking, EventType, Store } from "./store.ts";
 
 type HealthStatus = components["schemas"]["HealthStatus"];
 type NewEventType = components["schemas"]["NewEventType"];
+type NewBooking = components["schemas"]["NewBooking"];
+type FieldError = components["schemas"]["FieldError"];
 
 const DURATION_STEP_MINUTES = 15;
 
@@ -59,8 +62,60 @@ export function createHandlers({ store, now }: HandlerDependencies) {
       request: FastifyRequest<{ Params: { slug: string } }>,
     ): Promise<Slot[]> {
       const { durationMinutes } = findEventType(request.params.slug);
-      return freeSlots({ now: now(), durationMinutes });
+      return freeSlots({ now: now(), durationMinutes, busy: store.listBookings() });
     },
+
+    // No `await` from here to the store call: the time check and the insert must not interleave
+    // with another request (see Store#addBookingIfFree).
+    async EventTypes_createBooking(
+      request: FastifyRequest<{ Params: { slug: string }; Body: NewBooking }>,
+      reply: FastifyReply,
+    ): Promise<Booking> {
+      const eventType = findEventType(request.params.slug);
+      const booking = toBooking(eventType, request.body, now());
+
+      if (store.addBookingIfFree(booking) === "time_conflict") {
+        throw new ApiProblem(409, {
+          code: "time_conflict",
+          message: "Это время уже заняли. Выберите другое время.",
+        });
+      }
+
+      reply.code(201);
+      return booking;
+    },
+  };
+}
+
+function toBooking(eventType: EventType, input: NewBooking, now: Date): Booking {
+  const { slug, title, durationMinutes } = eventType;
+  const startsAt = new Date(input.startsAt);
+  const guestName = input.guestName.trim();
+  const comment = input.comment?.trim();
+
+  const fields: FieldError[] = [];
+  if (!isScheduledStart(now, durationMinutes, startsAt)) {
+    fields.push({
+      field: "startsAt",
+      message:
+        "Это время недоступно: запись возможна в рабочие часы на ближайшие 14 дней с шагом 30 минут",
+    });
+  }
+  if (guestName === "") {
+    fields.push({ field: "guestName", message: "Обязательное поле" });
+  }
+  if (fields.length > 0) {
+    throw validationProblem(fields);
+  }
+
+  return {
+    id: randomUUID(),
+    eventType: { slug, title, durationMinutes },
+    startsAt: formatInstant(startsAt),
+    endsAt: formatInstant(new Date(startsAt.getTime() + durationMinutes * 60_000)),
+    guestName,
+    guestEmail: input.guestEmail,
+    ...(comment ? { comment } : {}),
   };
 }
 
