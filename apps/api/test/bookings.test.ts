@@ -210,3 +210,20 @@ test("отклонённая запись не занимает время", asy
 
   expect(await slotStarts("short")).toContain(AT_10_00);
 });
+
+test("запись с телом не в JSON отвечает 400 validation_error, а не 500", async () => {
+  await start();
+
+  const response = await fetch(`${server?.baseUrl}/event-types/short/bookings`, {
+    method: "POST",
+    headers: { "content-type": "text/plain" },
+    body: `startsAt=${AT_10_00}`,
+  });
+
+  expect(response.status).toBe(400);
+  expect(await response.json()).toEqual({
+    code: "validation_error",
+    message: "Тело запроса должно быть в формате JSON",
+  });
+  expect(await slotStarts("short")).toContain(AT_10_00);
+});

@@ -22,6 +22,9 @@ export function buildApp({
 }: AppOptions = {}) {
   // allErrors: report every invalid field at once, so a form can mark all of them.
   const app = Fastify({ ajv: { customOptions: { allErrors: true } }, ...fastify });
+  // The contract only describes JSON bodies, and the schema only validates parsed JSON: a plain-text
+  // body would reach a handler unchecked. Without this parser such a request is rejected up front.
+  app.removeContentTypeParser("text/plain");
   // Set before the routes are registered so the openapi-glue plugin inherits the handlers.
   registerErrorHandlers(app);
   app.register(openapiGlue, { specification, serviceHandlers: createHandlers({ store, now }) });
