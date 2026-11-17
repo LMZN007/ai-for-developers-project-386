@@ -1,0 +1,16 @@
+# Render Blueprint: one free web service built from the Dockerfile in the repository root.
+# Render sets PORT for the container; the app listens on it (see Dockerfile).
+# Spec: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: calls-booking
+    runtime: docker
+    plan: free
+    region: frankfurt
+    repo: https://github.com/LMZN007/ai-for-developers-project-386
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    # Deploy a new commit on main only after its CI checks pass.
+    autoDeployTrigger: checksPass
