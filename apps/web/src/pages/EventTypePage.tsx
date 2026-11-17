@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import type { components } from "@calls-booking/contract";
 import { Alert, Anchor, Loader, Text, Title } from "@mantine/core";
 import { Link, useParams } from "react-router";
 import { api } from "../api.ts";
 import { browserTimeZone } from "../browserTime.ts";
 import LoadFailed from "../LoadFailed.tsx";
+import { useLoad } from "../useLoad.ts";
 import BookingConfirmation from "./booking/BookingConfirmation.tsx";
 import BookingForm from "./booking/BookingForm.tsx";
 import { emptyGuest, type GuestValues } from "./booking/guestRules.ts";
@@ -14,11 +15,7 @@ type EventType = components["schemas"]["EventType"];
 type Slot = components["schemas"]["Slot"];
 type Booking = components["schemas"]["Booking"];
 
-type PageState =
-  | { status: "loading" }
-  | { status: "not_found" }
-  | { status: "failed" }
-  | { status: "loaded"; eventType: EventType; slots: Slot[] };
+type PageData = { found: false } | { found: true; eventType: EventType; slots: Slot[] };
 
 // The guest's way through the page; the confirmation has no address of its own (spec).
 type Step = { kind: "choose" } | { kind: "form"; slot: Slot } | { kind: "done"; booking: Booking };
@@ -33,7 +30,7 @@ export default function EventTypePage() {
   if (state.status === "failed") {
     return <LoadFailed onRetry={retry} />;
   }
-  if (state.status === "not_found") {
+  if (!state.data.found) {
     return (
       <>
         <Title order={1}>Такой тип встречи не найден</Title>
@@ -44,7 +41,7 @@ export default function EventTypePage() {
     );
   }
 
-  const { eventType, slots } = state;
+  const { eventType, slots } = state.data;
   return (
     <>
       <Title order={1}>{eventType.title}</Title>
@@ -127,58 +124,33 @@ function BookingSteps({
 }
 
 function useEventTypeWithSlots(slug: string) {
-  const [state, setState] = useState<PageState>({ status: "loading" });
-  // Bumping the attempt re-runs the request effect («Повторить»).
-  const [attempt, setAttempt] = useState(0);
-
-  useEffect(() => {
-    let current = true;
+  const load = useCallback(async (): Promise<PageData | undefined> => {
     const path = { params: { path: { slug } } };
-    Promise.all([
+    const [eventType, slots] = await Promise.all([
       api.GET("/event-types/{slug}", path),
       api.GET("/event-types/{slug}/slots", path),
-    ]).then(
-      ([eventType, slots]) => {
-        if (!current) {
-          return;
-        }
-        if (eventType.response.status === 404) {
-          setState({ status: "not_found" });
-        } else if (eventType.data && slots.data) {
-          setState({ status: "loaded", eventType: eventType.data, slots: slots.data });
-        } else {
-          setState({ status: "failed" });
-        }
-      },
-      () => {
-        if (current) {
-          setState({ status: "failed" });
-        }
-      },
-    );
-    return () => {
-      current = false;
-    };
-  }, [slug, attempt]);
-
-  const retry = () => {
-    setState({ status: "loading" });
-    setAttempt((value) => value + 1);
-  };
+    ]);
+    if (eventType.response.status === 404) {
+      return { found: false };
+    }
+    if (eventType.data && slots.data) {
+      return { found: true, eventType: eventType.data, slots: slots.data };
+    }
+    return undefined;
+  }, [slug]);
+  const { state, retry, update } = useLoad(load);
 
   // Refreshes the slots in place, without a loading screen; on failure the old slots stay.
   const reloadSlots = useCallback(() => {
     api.GET("/event-types/{slug}/slots", { params: { path: { slug } } }).then(
       ({ data }) => {
         if (data) {
-          setState((current) =>
-            current.status === "loaded" ? { ...current, slots: data } : current,
-          );
+          update((current) => (current.found ? { ...current, slots: data } : current));
         }
       },
       () => {},
     );
-  }, [slug]);
+  }, [slug, update]);
 
   return { state, retry, reloadSlots };
 }

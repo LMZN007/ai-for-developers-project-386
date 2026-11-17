@@ -13,14 +13,14 @@ export default function BookPage() {
 
       {state.status === "loading" && <Loader mt="xl" aria-label="Загрузка" />}
       {state.status === "failed" && <LoadFailed onRetry={retry} />}
-      {state.status === "loaded" && state.eventTypes.length === 0 && (
+      {state.status === "loaded" && state.data.length === 0 && (
         <Text mt="xl" c="dimmed">
           Пока нет типов встреч
         </Text>
       )}
-      {state.status === "loaded" && state.eventTypes.length > 0 && (
+      {state.status === "loaded" && state.data.length > 0 && (
         <SimpleGrid cols={{ base: 1, sm: 2 }} mt="xl">
-          {state.eventTypes.map((eventType) => (
+          {state.data.map((eventType) => (
             <Card
               key={eventType.slug}
               component={Link}

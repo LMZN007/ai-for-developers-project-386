@@ -53,7 +53,7 @@ export default function EventTypesPage() {
 
       {state.status === "loading" && <Loader mt="xl" aria-label="Загрузка" />}
       {state.status === "failed" && <LoadFailed onRetry={retry} />}
-      {state.status === "loaded" && state.eventTypes.length === 0 && (
+      {state.status === "loaded" && state.data.length === 0 && (
         <Stack mt="xl" align="flex-start">
           <Text c="dimmed">Типов встреч пока нет</Text>
           <Button component={Link} to="/admin/event-types/new" variant="light">
@@ -61,9 +61,9 @@ export default function EventTypesPage() {
           </Button>
         </Stack>
       )}
-      {state.status === "loaded" && state.eventTypes.length > 0 && (
+      {state.status === "loaded" && state.data.length > 0 && (
         <Stack mt="xl">
-          {state.eventTypes.map((eventType) => (
+          {state.data.map((eventType) => (
             <EventTypeRow key={eventType.slug} eventType={eventType} />
           ))}
         </Stack>

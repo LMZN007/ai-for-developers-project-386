@@ -1,45 +1,16 @@
-import { useEffect, useState } from "react";
 import type { components } from "@calls-booking/contract";
 import { Loader, Table, Text, Title } from "@mantine/core";
 import { api } from "../../api.ts";
 import { browserTimeZone, slotLabel } from "../../browserTime.ts";
 import LoadFailed from "../../LoadFailed.tsx";
+import { useLoad } from "../../useLoad.ts";
 
 type Booking = components["schemas"]["Booking"];
 
-type LoadState =
-  | { status: "loading" }
-  | { status: "failed" }
-  | { status: "loaded"; bookings: Booking[] };
+const loadBookings = () => api.GET("/bookings").then(({ data }) => data);
 
 export default function BookingsPage() {
-  const [state, setState] = useState<LoadState>({ status: "loading" });
-  // Bumping the attempt re-runs the request effect («Повторить»).
-  const [attempt, setAttempt] = useState(0);
-
-  useEffect(() => {
-    let current = true;
-    api.GET("/bookings").then(
-      ({ data }) => {
-        if (current) {
-          setState(data ? { status: "loaded", bookings: data } : { status: "failed" });
-        }
-      },
-      () => {
-        if (current) {
-          setState({ status: "failed" });
-        }
-      },
-    );
-    return () => {
-      current = false;
-    };
-  }, [attempt]);
-
-  const retry = () => {
-    setState({ status: "loading" });
-    setAttempt((value) => value + 1);
-  };
+  const { state, retry } = useLoad(loadBookings);
 
   return (
     <>
@@ -50,13 +21,13 @@ export default function BookingsPage() {
 
       {state.status === "loading" && <Loader mt="xl" aria-label="Загрузка" />}
       {state.status === "failed" && <LoadFailed onRetry={retry} />}
-      {state.status === "loaded" && state.bookings.length === 0 && (
+      {state.status === "loaded" && state.data.length === 0 && (
         <Text mt="xl" c="dimmed">
           Предстоящих записей нет
         </Text>
       )}
-      {state.status === "loaded" && state.bookings.length > 0 && (
-        <BookingsTable bookings={state.bookings} />
+      {state.status === "loaded" && state.data.length > 0 && (
+        <BookingsTable bookings={state.data} />
       )}
     </>
   );
