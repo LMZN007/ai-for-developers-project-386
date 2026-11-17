@@ -11,6 +11,8 @@ type NewBooking = components["schemas"]["NewBooking"];
 type FieldError = components["schemas"]["FieldError"];
 
 const DURATION_STEP_MINUTES = 15;
+/** Limit for a title or a guest name, counted after trimming spaces at both ends. */
+const MAX_NAME_LENGTH = 100;
 
 export interface HandlerDependencies {
   store: Store;
@@ -109,8 +111,9 @@ function toBooking(eventType: EventType, input: NewBooking, now: Date): Booking 
         "Это время недоступно: запись возможна в рабочие часы на ближайшие 14 дней с шагом 30 минут",
     });
   }
-  if (guestName === "") {
-    fields.push({ field: "guestName", message: "Обязательное поле" });
+  const guestNameError = requiredTextError(guestName);
+  if (guestNameError) {
+    fields.push({ field: "guestName", message: guestNameError });
   }
   if (fields.length > 0) {
     throw validationProblem(fields);
@@ -131,9 +134,10 @@ function normalizeEventType(input: NewEventType): EventType {
   const title = input.title.trim();
   const description = input.description?.trim();
 
-  const fields = [];
-  if (title === "") {
-    fields.push({ field: "title", message: "Обязательное поле" });
+  const fields: FieldError[] = [];
+  const titleError = requiredTextError(title);
+  if (titleError) {
+    fields.push({ field: "title", message: titleError });
   }
   if (input.durationMinutes % DURATION_STEP_MINUTES !== 0) {
     fields.push({
@@ -151,4 +155,15 @@ function normalizeEventType(input: NewEventType): EventType {
     ...(description ? { description } : {}),
     durationMinutes: input.durationMinutes,
   };
+}
+
+/** The rule for a trimmed title or guest name: not empty and at most MAX_NAME_LENGTH characters. */
+function requiredTextError(trimmed: string): string | undefined {
+  if (trimmed === "") {
+    return "Обязательное поле";
+  }
+  if (trimmed.length > MAX_NAME_LENGTH) {
+    return `Не длиннее ${MAX_NAME_LENGTH} символов`;
+  }
+  return undefined;
 }

@@ -195,3 +195,22 @@ test("POST /event-types с битым JSON отвечает 400 validation_error
   expect(response.status).toBe(400);
   expect(await response.json()).toMatchObject({ code: "validation_error" });
 });
+
+test("длина названия считается после обрезки пробелов: 100 символов с пробелами по краям принимаются", async () => {
+  server = await startServer();
+  const title = "Я".repeat(100);
+
+  const { status, body } = await postEventType({ ...validNewEventType, title: `  ${title}  ` });
+
+  expect(status).toBe(201);
+  expect(body.title).toBe(title);
+});
+
+test("название длиннее 100 символов после обрезки отклоняется с понятным текстом", async () => {
+  server = await startServer();
+
+  const { status, body } = await postEventType({ ...validNewEventType, title: "Я".repeat(101) });
+
+  expect(status).toBe(400);
+  expect(body.fields).toEqual([{ field: "title", message: "Не длиннее 100 символов" }]);
+});

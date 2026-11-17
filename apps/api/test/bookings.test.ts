@@ -227,3 +227,18 @@ test("запись с телом не в JSON отвечает 400 validation_er
   });
   expect(await slotStarts("short")).toContain(AT_10_00);
 });
+
+test("длина имени гостя считается после обрезки пробелов", async () => {
+  await start();
+  const name = "Я".repeat(100);
+
+  const accepted = await book("short", { ...guest, startsAt: AT_10_00, guestName: ` ${name} ` });
+  const rejected = await book("short", { ...guest, startsAt: AT_11_00, guestName: `${name}Я` });
+
+  expect(accepted.status).toBe(201);
+  expect(accepted.body.guestName).toBe(name);
+  expect(rejected.status).toBe(400);
+  expect(rejected.body.fields).toEqual([
+    { field: "guestName", message: "Не длиннее 100 символов" },
+  ]);
+});
