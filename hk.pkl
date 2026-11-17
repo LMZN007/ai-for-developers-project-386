@@ -4,12 +4,17 @@ import "package://github.com/jdx/hk/releases/download/v2.12.0/hk@2.12.0#/Builtin
 // Files owned by Hexlet: the course forbids editing them, so formatters and linters skip them.
 local hexletFiles = List(".github/workflows/hexlet-check.yml", ".github/workflows/README.md")
 
+// Third-party agent skills installed by `npx skills add`; `skills update` overwrites them.
+local vendoredSkills = List(".agents/**", ".claude/skills/**", "skills-lock.json")
+
 // Fast checks on staged files: run on every commit.
 local fast = new Mapping<String, Step> {
     ["oxfmt"] = (Builtins.oxfmt) {
-        exclude = List("**/pnpm-lock.yaml") + hexletFiles
+        exclude = List("**/pnpm-lock.yaml") + hexletFiles + vendoredSkills
     }
-    ["oxlint"] = Builtins.ox_lint
+    ["oxlint"] = (Builtins.ox_lint) {
+        exclude = vendoredSkills
+    }
     ["jactionlint"] = (Builtins.jactionlint) {
         exclude = hexletFiles
     }
