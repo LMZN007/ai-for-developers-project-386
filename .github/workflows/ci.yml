@@ -27,5 +27,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # `mise run setup` already downloaded Chromium; Ubuntu also needs its system libraries.
+      - name: Install Chromium system libraries
+        run: mise exec -- pnpm --filter @calls-booking/e2e exec playwright install-deps chromium
+
       - name: Run checks
         run: mise run check

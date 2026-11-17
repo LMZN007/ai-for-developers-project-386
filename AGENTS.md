@@ -8,7 +8,8 @@
 
 - `mise install` — поставить инструменты; хук `postinstall` сам выполнит `mise run setup` (pnpm install и git-хуки hk).
 - `mise run dev` — API (:3000) и web (:5173) в фоне как daemons; `mise daemons ls | logs api | stop`.
-- `mise run check` — все проверки (oxfmt, oxlint, jactionlint, gen, typecheck, test). CI вызывает ту же команду. Запускать перед завершением задачи.
+- `mise run check` — все проверки (oxfmt, oxlint, jactionlint, gen, typecheck, test, e2e). CI вызывает ту же команду. Запускать перед завершением задачи. Хук `pre-push` делает то же, но без e2e.
+- `mise run e2e` — браузерный сценарий (Playwright, Chromium) с настоящим сервером на портах 3100/4173; Chromium ставит `mise run setup`.
 - `mise run lint`, `mise run format`, `mise run typecheck`, `mise run test` — по отдельности.
 - `mise run gen` — пересобрать OpenAPI и SDK из контракта.
 - Один тест: `pnpm --filter @calls-booking/api exec vitest run -t "<имя теста>"`.

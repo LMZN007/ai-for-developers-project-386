@@ -22,8 +22,12 @@ API_PORT = "3000"
 postinstall = { task = "setup" }
 
 [tasks.setup]
-description = "Install dependencies and the git hooks"
-run = ["pnpm install --frozen-lockfile", "hk install --mise"]
+description = "Install dependencies, the Chromium browser for e2e and the git hooks"
+run = [
+  "pnpm install --frozen-lockfile",
+  "pnpm --filter @calls-booking/e2e exec playwright install chromium",
+  "hk install --mise",
+]
 
 [tasks.gen]
 description = "Generate OpenAPI and the TypeScript SDK from the TypeSpec contract"
@@ -46,6 +50,11 @@ run = "pnpm -r run typecheck"
 description = "Run every test suite"
 depends = ["gen"]
 run = "pnpm -r run test"
+
+[tasks.e2e]
+description = "Run the browser scenario against a real server (Playwright, Chromium)"
+depends = ["gen"]
+run = "pnpm --filter @calls-booking/e2e run e2e"
 
 [tasks.check]
 description = "Run every check: the same set CI runs"

@@ -53,8 +53,14 @@ hooks {
     ["pre-push"] {
         steps = all
     }
+    // `mise run check` and CI add the browser scenario; pre-push skips it so a push does not wait for a browser.
     ["check"] {
-        steps = all
+        steps = (all) {
+            ["e2e"] {
+                depends = "gen"
+                check = "pnpm --filter @calls-booking/e2e run --silent e2e"
+            }
+        }
     }
     ["fix"] {
         fix = true
