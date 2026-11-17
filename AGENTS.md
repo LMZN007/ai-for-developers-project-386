@@ -1,0 +1,37 @@
+# AGENTS.md
+
+Сервис записи на встречи (аналог Cal.com). Сценарий — в README.md.
+
+## Команды
+
+Инструменты и версии — в `mise.toml`. Запускать через mise, не глобальные `node`/`pnpm`.
+
+- `mise install` — поставить инструменты; хук `postinstall` сам выполнит `mise run setup` (pnpm install и git-хуки hk).
+- `mise run dev` — API (:3000) и web (:5173) в фоне как daemons; `mise daemons ls | logs api | stop`.
+- `mise run check` — все проверки (oxfmt, oxlint, jactionlint, gen, typecheck, test). CI вызывает ту же команду. Запускать перед завершением задачи.
+- `mise run lint`, `mise run format`, `mise run typecheck`, `mise run test` — по отдельности.
+- `mise run gen` — пересобрать OpenAPI и SDK из контракта.
+- Один тест: `pnpm --filter @calls-booking/api exec vitest run -t "<имя теста>"`.
+
+## Устройство
+
+pnpm-монорепо, contract-first:
+
+```
+packages/contract/main.tsp ─tsp─▶ generated/openapi.yaml ─openapi-typescript─▶ generated/schema.d.ts
+                                        │                                            │
+apps/api: fastify-openapi-glue строит   ┘          apps/web: SDK createApiClient() ◀─┘
+маршруты и валидацию из openapi.yaml
+```
+
+- API меняется только через `main.tsp`, затем `mise run gen`.
+- Обработчики — `apps/api/src/handlers.ts`; имя метода = `operationId` из OpenAPI (например, `Health_check`).
+- Web ходит в API только через SDK по `/api/*`; в dev Vite проксирует на :3000.
+- Дымовой тест `apps/api/test/smoke.test.ts` поднимает сервер и вызывает его через SDK.
+
+## Правила
+
+- Коммиты — Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`, `test:`, `refactor:`; scope — `api`, `web`, `contract`). Проверяется хуком `commit-msg`.
+- `packages/contract/generated/` не редактировать и не коммитить — он генерируется.
+- `.github/workflows/hexlet-check.yml` и `.github/workflows/README.md` принадлежат Хекслету: не менять, не переименовывать репозиторий.
+- Не отключать правила линтеров; исключение — только узкое (путь + правило) и с причиной.
