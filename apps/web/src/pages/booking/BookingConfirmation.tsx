@@ -1,6 +1,6 @@
 import type { components } from "@calls-booking/contract";
 import { Button, Card, Stack, Table, Title } from "@mantine/core";
-import { browserTimeZone, slotLabel } from "../../browserTime.ts";
+import { browserTimeZone, intervalLabel } from "../../browserTime.ts";
 
 type Booking = components["schemas"]["Booking"];
 
@@ -13,7 +13,7 @@ export default function BookingConfirmation({
 }) {
   const rows = [
     ["Что", `${booking.eventType.title}, ${booking.eventType.durationMinutes} мин`],
-    ["Когда", `${slotLabel(booking, true)} (${browserTimeZone()})`],
+    ["Когда", `${intervalLabel(booking, true)} (${browserTimeZone()})`],
     ["Кто", `Владелец и ${booking.guestName} (${booking.guestEmail})`],
   ];
 

@@ -29,11 +29,14 @@ export function dayTitle(dateKey: string): string {
     month: "long",
     timeZone: "UTC",
   }).format(new Date(Date.UTC(year, month - 1, day)));
-  return text.charAt(0).toUpperCase() + text.slice(1);
+  return capitalize(text);
 }
 
-/** "Среда, 25 ноября, 11:00–11:30" (with the year when asked) in the browser's zone. */
-export function slotLabel(slot: { startsAt: string; endsAt: string }, withYear = false): string {
+/** A slot or a booking as "Среда, 25 ноября, 11:00–11:30" (with the year when asked) in the browser's zone. */
+export function intervalLabel(
+  slot: { startsAt: string; endsAt: string },
+  withYear = false,
+): string {
   const date = new Intl.DateTimeFormat("ru-RU", {
     weekday: "long",
     day: "numeric",
@@ -42,6 +45,10 @@ export function slotLabel(slot: { startsAt: string; endsAt: string }, withYear =
   })
     .format(new Date(slot.startsAt))
     .replace(/ г\.$/, "");
-  const text = `${date}, ${localTime(slot.startsAt)}–${localTime(slot.endsAt)}`;
+  return capitalize(`${date}, ${localTime(slot.startsAt)}–${localTime(slot.endsAt)}`);
+}
+
+/** Russian weekday names are lowercase; a label starts with a capital letter. */
+function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }

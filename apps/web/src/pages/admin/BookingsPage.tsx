@@ -1,7 +1,7 @@
 import type { components } from "@calls-booking/contract";
 import { Loader, Table, Text, Title } from "@mantine/core";
 import { api } from "../../api.ts";
-import { browserTimeZone, slotLabel } from "../../browserTime.ts";
+import { browserTimeZone, intervalLabel } from "../../browserTime.ts";
 import LoadFailed from "../../LoadFailed.tsx";
 import { useLoad } from "../../useLoad.ts";
 
@@ -50,7 +50,7 @@ function BookingsTable({ bookings }: { bookings: Booking[] }) {
         <Table.Tbody>
           {bookings.map((booking) => (
             <Table.Tr key={booking.id}>
-              <Table.Td>{slotLabel(booking)}</Table.Td>
+              <Table.Td>{intervalLabel(booking)}</Table.Td>
               <Table.Td>{booking.eventType.title}</Table.Td>
               <Table.Td>{booking.guestName}</Table.Td>
               <Table.Td>{booking.guestEmail}</Table.Td>

@@ -52,7 +52,7 @@ export function createHandlers({ store, now }: HandlerDependencies) {
       request: FastifyRequest<{ Body: NewEventType }>,
       reply: FastifyReply,
     ): Promise<EventType> {
-      const eventType = normalizeEventType(request.body);
+      const eventType = validatedEventType(request.body);
 
       if (store.addEventType(eventType) === "slug_taken") {
         throw new ApiProblem(409, { code: "slug_taken", message: "Эта ссылка уже занята" });
@@ -90,7 +90,7 @@ export function createHandlers({ store, now }: HandlerDependencies) {
       reply: FastifyReply,
     ): Promise<Booking> {
       const eventType = findEventType(request.params.slug);
-      const booking = toBooking(eventType, request.body, now());
+      const booking = validatedBooking(eventType, request.body, now());
 
       if (store.addBookingIfFree(booking) === "time_conflict") {
         throw new ApiProblem(409, {
@@ -105,7 +105,8 @@ export function createHandlers({ store, now }: HandlerDependencies) {
   };
 }
 
-function toBooking(eventType: EventType, input: NewBooking, now: Date): Booking {
+/** The booking a request asks for, after the time and field rules; throws a 400 problem otherwise. */
+function validatedBooking(eventType: EventType, input: NewBooking, now: Date): Booking {
   const { slug, title, durationMinutes } = eventType;
   const startsAt = new Date(input.startsAt);
   const guestName = input.guestName.trim();
@@ -137,7 +138,8 @@ function toBooking(eventType: EventType, input: NewBooking, now: Date): Booking 
   };
 }
 
-function normalizeEventType(input: NewEventType): EventType {
+/** The event type a request asks for, trimmed and checked; throws a 400 problem otherwise. */
+function validatedEventType(input: NewEventType): EventType {
   const title = input.title.trim();
   const description = input.description?.trim();
 
