@@ -21,3 +21,6 @@ tsp-output/
 # Local mise overrides
 mise.local.toml
 generated/
+
+# Personal Claude Code settings
+.claude/settings.local.json
