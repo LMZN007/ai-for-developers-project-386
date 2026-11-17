@@ -29,8 +29,8 @@ model NewEventType {
   @pattern("^[a-z0-9]+(-[a-z0-9]+)*$")
   slug: string;
 
+  /** 1–100 characters after trimming spaces at both ends; the server trims and checks the length. */
   @minLength(1)
-  @maxLength(100)
   title: string;
 
   @maxLength(500)
@@ -52,8 +52,8 @@ model NewBooking {
   /** Must be the start of a free slot (see `listSlots`). */
   startsAt: utcDateTime;
 
+  /** 1–100 characters after trimming spaces at both ends; the server trims and checks the length. */
   @minLength(1)
-  @maxLength(100)
   guestName: string;
 
   @format("email")

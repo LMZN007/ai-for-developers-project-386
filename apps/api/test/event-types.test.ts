@@ -159,3 +159,67 @@ test("POST /event-types с занятым slug отвечает 409 slug_taken �
   expect(body).toEqual({ code: "slug_taken", message: "Эта ссылка уже занята" });
   expect((await server.client.GET("/event-types")).data).toEqual([intro]);
 });
+
+test.each([
+  ["text/plain", "slug=intro"],
+  ["application/x-www-form-urlencoded", "slug=intro&title=X&durationMinutes=30"],
+])(
+  "POST /event-types с телом %s отвечает 400 validation_error, а не 500",
+  async (contentType, body) => {
+    server = await startServer();
+
+    const response = await fetch(`${server.baseUrl}/event-types`, {
+      method: "POST",
+      headers: { "content-type": contentType },
+      body,
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      code: "validation_error",
+      message: "Тело запроса должно быть в формате JSON",
+    });
+    expect((await server.client.GET("/event-types")).data).toEqual([]);
+  },
+);
+
+test("POST /event-types с битым JSON отвечает 400 validation_error", async () => {
+  server = await startServer();
+
+  const response = await fetch(`${server.baseUrl}/event-types`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: "{ не json",
+  });
+
+  expect(response.status).toBe(400);
+  expect(await response.json()).toMatchObject({ code: "validation_error" });
+});
+
+test("длина названия считается после обрезки пробелов: 100 символов с пробелами по краям принимаются", async () => {
+  server = await startServer();
+  const title = "Я".repeat(100);
+
+  const { status, body } = await postEventType({ ...validNewEventType, title: `  ${title}  ` });
+
+  expect(status).toBe(201);
+  expect(body.title).toBe(title);
+});
+
+test("название длиннее 100 символов после обрезки отклоняется с понятным текстом", async () => {
+  server = await startServer();
+
+  const { status, body } = await postEventType({ ...validNewEventType, title: "Я".repeat(101) });
+
+  expect(status).toBe(400);
+  expect(body.fields).toEqual([{ field: "title", message: "Не длиннее 100 символов" }]);
+});
+
+test("длительность строкой («30») не приводится к числу и отклоняется", async () => {
+  server = await startServer();
+
+  const { status, body } = await postEventType({ ...validNewEventType, durationMinutes: "30" });
+
+  expect(status).toBe(400);
+  expect(body.fields).toEqual([{ field: "durationMinutes", message: "Некорректное значение" }]);
+});

@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import type { components } from "@calls-booking/contract";
 import { Alert, Button, Group, Stack, Text, TextInput, Textarea } from "@mantine/core";
 import { api } from "../../api.ts";
-import { browserTimeZone, slotLabel } from "../../browserTime.ts";
+import { browserTimeZone, intervalLabel } from "../../browserTime.ts";
 import { isGuestField, validateGuest, type GuestErrors, type GuestValues } from "./guestRules.ts";
 
 type EventType = components["schemas"]["EventType"];
@@ -94,7 +94,7 @@ export default function BookingForm({
       <Stack mt="lg" maw={480}>
         <Group justify="space-between" align="baseline" wrap="wrap" gap="xs">
           <Text fw={600}>
-            {slotLabel(slot)} ({browserTimeZone()})
+            {intervalLabel(slot)} ({browserTimeZone()})
           </Text>
           <Button variant="subtle" size="compact-sm" onClick={onBack}>
             Изменить время

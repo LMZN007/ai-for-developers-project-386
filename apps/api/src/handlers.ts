@@ -2,7 +2,15 @@ import { randomUUID } from "node:crypto";
 import type { components } from "@calls-booking/contract";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { ApiProblem, validationProblem } from "./errors.ts";
-import { formatInstant, freeSlots, isScheduledStart, type Slot } from "./schedule.ts";
+import {
+  endOf,
+  formatInstant,
+  freeSlots,
+  HORIZON_DAYS,
+  isScheduledStart,
+  SLOT_STEP_MINUTES,
+  type Slot,
+} from "./schedule.ts";
 import type { Booking, EventType, Store } from "./store.ts";
 
 type HealthStatus = components["schemas"]["HealthStatus"];
@@ -11,6 +19,8 @@ type NewBooking = components["schemas"]["NewBooking"];
 type FieldError = components["schemas"]["FieldError"];
 
 const DURATION_STEP_MINUTES = 15;
+/** Limit for a title or a guest name, counted after trimming spaces at both ends. */
+const MAX_NAME_LENGTH = 100;
 
 export interface HandlerDependencies {
   store: Store;
@@ -42,7 +52,7 @@ export function createHandlers({ store, now }: HandlerDependencies) {
       request: FastifyRequest<{ Body: NewEventType }>,
       reply: FastifyReply,
     ): Promise<EventType> {
-      const eventType = normalizeEventType(request.body);
+      const eventType = validatedEventType(request.body);
 
       if (store.addEventType(eventType) === "slug_taken") {
         throw new ApiProblem(409, { code: "slug_taken", message: "Эта ссылка уже занята" });
@@ -80,7 +90,7 @@ export function createHandlers({ store, now }: HandlerDependencies) {
       reply: FastifyReply,
     ): Promise<Booking> {
       const eventType = findEventType(request.params.slug);
-      const booking = toBooking(eventType, request.body, now());
+      const booking = validatedBooking(eventType, request.body, now());
 
       if (store.addBookingIfFree(booking) === "time_conflict") {
         throw new ApiProblem(409, {
@@ -95,7 +105,8 @@ export function createHandlers({ store, now }: HandlerDependencies) {
   };
 }
 
-function toBooking(eventType: EventType, input: NewBooking, now: Date): Booking {
+/** The booking a request asks for, after the time and field rules; throws a 400 problem otherwise. */
+function validatedBooking(eventType: EventType, input: NewBooking, now: Date): Booking {
   const { slug, title, durationMinutes } = eventType;
   const startsAt = new Date(input.startsAt);
   const guestName = input.guestName.trim();
@@ -105,12 +116,12 @@ function toBooking(eventType: EventType, input: NewBooking, now: Date): Booking 
   if (!isScheduledStart(now, durationMinutes, startsAt)) {
     fields.push({
       field: "startsAt",
-      message:
-        "Это время недоступно: запись возможна в рабочие часы на ближайшие 14 дней с шагом 30 минут",
+      message: `Это время недоступно: запись возможна в рабочие часы на ближайшие ${HORIZON_DAYS} дней с шагом ${SLOT_STEP_MINUTES} минут`,
     });
   }
-  if (guestName === "") {
-    fields.push({ field: "guestName", message: "Обязательное поле" });
+  const guestNameError = requiredTextError(guestName);
+  if (guestNameError) {
+    fields.push({ field: "guestName", message: guestNameError });
   }
   if (fields.length > 0) {
     throw validationProblem(fields);
@@ -120,25 +131,27 @@ function toBooking(eventType: EventType, input: NewBooking, now: Date): Booking 
     id: randomUUID(),
     eventType: { slug, title, durationMinutes },
     startsAt: formatInstant(startsAt),
-    endsAt: formatInstant(new Date(startsAt.getTime() + durationMinutes * 60_000)),
+    endsAt: formatInstant(endOf(startsAt, durationMinutes)),
     guestName,
     guestEmail: input.guestEmail,
     ...(comment ? { comment } : {}),
   };
 }
 
-function normalizeEventType(input: NewEventType): EventType {
+/** The event type a request asks for, trimmed and checked; throws a 400 problem otherwise. */
+function validatedEventType(input: NewEventType): EventType {
   const title = input.title.trim();
   const description = input.description?.trim();
 
-  const fields = [];
-  if (title === "") {
-    fields.push({ field: "title", message: "Обязательное поле" });
+  const fields: FieldError[] = [];
+  const titleError = requiredTextError(title);
+  if (titleError) {
+    fields.push({ field: "title", message: titleError });
   }
   if (input.durationMinutes % DURATION_STEP_MINUTES !== 0) {
     fields.push({
       field: "durationMinutes",
-      message: "Длительность должна быть кратна 15 минутам",
+      message: `Длительность должна быть кратна ${DURATION_STEP_MINUTES} минутам`,
     });
   }
   if (fields.length > 0) {
@@ -151,4 +164,15 @@ function normalizeEventType(input: NewEventType): EventType {
     ...(description ? { description } : {}),
     durationMinutes: input.durationMinutes,
   };
+}
+
+/** The rule for a trimmed title or guest name: not empty and at most MAX_NAME_LENGTH characters. */
+function requiredTextError(trimmed: string): string | undefined {
+  if (trimmed === "") {
+    return "Обязательное поле";
+  }
+  if (trimmed.length > MAX_NAME_LENGTH) {
+    return `Не длиннее ${MAX_NAME_LENGTH} символов`;
+  }
+  return undefined;
 }

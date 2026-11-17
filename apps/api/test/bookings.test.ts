@@ -210,3 +210,44 @@ test("отклонённая запись не занимает время", asy
 
   expect(await slotStarts("short")).toContain(AT_10_00);
 });
+
+test("запись с телом не в JSON отвечает 400 validation_error, а не 500", async () => {
+  await start();
+
+  const response = await fetch(`${server?.baseUrl}/event-types/short/bookings`, {
+    method: "POST",
+    headers: { "content-type": "text/plain" },
+    body: `startsAt=${AT_10_00}`,
+  });
+
+  expect(response.status).toBe(400);
+  expect(await response.json()).toEqual({
+    code: "validation_error",
+    message: "Тело запроса должно быть в формате JSON",
+  });
+  expect(await slotStarts("short")).toContain(AT_10_00);
+});
+
+test("длина имени гостя считается после обрезки пробелов", async () => {
+  await start();
+  const name = "Я".repeat(100);
+
+  const accepted = await book("short", { ...guest, startsAt: AT_10_00, guestName: ` ${name} ` });
+  const rejected = await book("short", { ...guest, startsAt: AT_11_00, guestName: `${name}Я` });
+
+  expect(accepted.status).toBe(201);
+  expect(accepted.body.guestName).toBe(name);
+  expect(rejected.status).toBe(400);
+  expect(rejected.body.fields).toEqual([
+    { field: "guestName", message: "Не длиннее 100 символов" },
+  ]);
+});
+
+test("имя гостя числом не приводится к строке и отклоняется", async () => {
+  await start();
+
+  const { status, body } = await book("short", { ...guest, startsAt: AT_10_00, guestName: 42 });
+
+  expect(status).toBe(400);
+  expect(body.fields).toEqual([{ field: "guestName", message: "Некорректное значение" }]);
+});

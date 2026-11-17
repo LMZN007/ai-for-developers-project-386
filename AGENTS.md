@@ -29,10 +29,12 @@ apps/api: fastify-openapi-glue строит   ┘          apps/web: SDK createA
 - Обработчики — `apps/api/src/handlers.ts`; имя метода = `operationId` из OpenAPI (например, `Health_check`).
 - Web ходит в API только через SDK по `/api/*`; в dev Vite проксирует на :3000.
 - Дымовой тест `apps/api/test/smoke.test.ts` поднимает сервер и вызывает его через SDK.
+- Термины `GLOSSARY.md` в коде и контракте называются по-английски: Тип встречи — `EventType`, Слот — `Slot`, Запись — `Booking`, Гость — поля `guest*`, Конфликт — ответ 409 `time_conflict`; Доступность и Горизонт записи — константы в `apps/api/src/schedule.ts`. Это имена кода, а не синонимы из списков _Avoid_: в текстах интерфейса и в обсуждении — только русские термины глоссария.
 
 ## Правила
 
 - Коммиты — Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`, `test:`, `refactor:`; scope — `api`, `web`, `contract`). Проверяется хуком `commit-msg`.
+- Коммит, который выполняет тикет, ссылается на него номером в конце заголовка: `feat(api): запись на свободный слот (#14)`. GitHub превращает номер в ссылку, и по истории видно, какой коммит какую задачу делал.
 - `packages/contract/generated/` не редактировать и не коммитить — он генерируется.
 - `.github/workflows/hexlet-check.yml` и `.github/workflows/README.md` принадлежат Хекслету: не менять, не переименовывать репозиторий.
 - Версии и `CHANGELOG.md` ведёт release-please (Release PR после `feat`/`fix` в `main`): руками не править.

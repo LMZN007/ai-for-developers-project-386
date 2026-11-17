@@ -41,6 +41,14 @@ export function registerErrorHandlers(app: FastifyInstance) {
       return reply.code(problem.statusCode).send(problem.body);
     }
 
+    if (error.code === "FST_ERR_CTP_INVALID_MEDIA_TYPE") {
+      const body: ApiError = {
+        code: "validation_error",
+        message: "Тело запроса должно быть в формате JSON",
+      };
+      return reply.code(400).send(body);
+    }
+
     if (error.statusCode !== undefined && error.statusCode < 500) {
       const body: ApiError = { code: "validation_error", message: "Некорректный запрос" };
       return reply.code(400).send(body);
