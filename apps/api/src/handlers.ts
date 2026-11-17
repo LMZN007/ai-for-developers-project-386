@@ -65,6 +65,14 @@ export function createHandlers({ store, now }: HandlerDependencies) {
       return freeSlots({ now: now(), durationMinutes, busy: store.listBookings() });
     },
 
+    async Bookings_list(): Promise<Booking[]> {
+      const moment = now().getTime();
+      return store
+        .listBookings()
+        .filter((booking) => Date.parse(booking.endsAt) > moment)
+        .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
+    },
+
     // No `await` from here to the store call: the time check and the insert must not interleave
     // with another request (see Store#addBookingIfFree).
     async EventTypes_createBooking(

@@ -188,3 +188,16 @@ namespace EventTypes {
         @body body: ApiError;
       };
 }
+
+@route("/bookings")
+namespace Bookings {
+  /**
+   * Upcoming bookings of every event type: those that have not ended yet
+   * (end after the current moment), by start time, nearest first.
+   */
+  @get
+  op list(): {
+    @statusCode statusCode: 200;
+    @body body: Booking[];
+  };
+}
