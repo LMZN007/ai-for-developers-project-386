@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/LMZN007/ai-for-developers-project-386/compare/v0.1.0...v0.1.1) (2026-11-17)
+
+
+### Bug Fixes
+
+* review fixes for the booking spec ([#12](https://github.com/LMZN007/ai-for-developers-project-386/issues/12)) ([#21](https://github.com/LMZN007/ai-for-developers-project-386/issues/21)) ([eb89d86](https://github.com/LMZN007/ai-for-developers-project-386/commit/eb89d868e2e16fad3d92c788501e8be48e86ff4b))
+
 ## 0.1.0 (2026-11-17)
 
 
