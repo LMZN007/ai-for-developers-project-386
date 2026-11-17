@@ -1,3 +1,3 @@
-import { createApiClient } from '@calls-booking/contract'
+import { createApiClient } from "@calls-booking/contract";
 
-export const api = createApiClient(`${window.location.origin}/api`)
+export const api = createApiClient(`${window.location.origin}/api`);

@@ -1,0 +1,55 @@
+amends "package://github.com/jdx/hk/releases/download/v2.12.0/hk@2.12.0#/Config.pkl"
+import "package://github.com/jdx/hk/releases/download/v2.12.0/hk@2.12.0#/Builtins.pkl"
+
+// Files owned by Hexlet: the course forbids editing them, so formatters and linters skip them.
+local hexletFiles = List(".github/workflows/hexlet-check.yml", ".github/workflows/README.md")
+
+// Fast checks on staged files: run on every commit.
+local fast = new Mapping<String, Step> {
+    ["oxfmt"] = (Builtins.oxfmt) {
+        exclude = List("**/pnpm-lock.yaml") + hexletFiles
+    }
+    ["oxlint"] = Builtins.ox_lint
+    ["jactionlint"] = (Builtins.jactionlint) {
+        exclude = hexletFiles
+    }
+}
+
+// Whole-project checks: run before push, in `mise run check` and in CI.
+local all = (fast) {
+    // The SDK types are generated (not committed), so build them first.
+    ["gen"] {
+        check = "pnpm run --silent gen"
+    }
+    ["typecheck"] {
+        depends = "gen"
+        check = "pnpm -r --silent run typecheck"
+    }
+    ["test"] {
+        depends = "gen"
+        check = "pnpm -r --silent run test"
+    }
+}
+
+hooks {
+    ["pre-commit"] {
+        fix = true
+        stash = "git"
+        steps = fast
+    }
+    ["commit-msg"] {
+        steps {
+            ["conventional-commit"] = Builtins.check_conventional_commit
+        }
+    }
+    ["pre-push"] {
+        steps = all
+    }
+    ["check"] {
+        steps = all
+    }
+    ["fix"] {
+        fix = true
+        steps = fast
+    }
+}

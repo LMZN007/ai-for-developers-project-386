@@ -2,5 +2,8 @@
   "name": "calls-booking",
   "private": true,
   "type": "module",
+  "scripts": {
+    "gen": "pnpm --filter @calls-booking/contract run gen"
+  },
   "packageManager": "pnpm@12.21.0"
 }
