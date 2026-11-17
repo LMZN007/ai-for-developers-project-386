@@ -20,3 +20,4 @@ tsp-output/
 
 # Local mise overrides
 mise.local.toml
+generated/
