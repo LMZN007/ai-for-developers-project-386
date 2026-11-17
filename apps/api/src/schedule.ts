@@ -65,13 +65,20 @@ function scheduledSlots(now: Date, durationMinutes: number): Slot[] {
     ) {
       const startsAt = instantAt(day, start, OWNER_TIME_ZONE);
       if (startsAt.getTime() > now.getTime()) {
-        const endsAt = new Date(startsAt.getTime() + durationMinutes * MINUTE_MS);
-        slots.push({ startsAt: formatInstant(startsAt), endsAt: formatInstant(endsAt) });
+        slots.push({
+          startsAt: formatInstant(startsAt),
+          endsAt: formatInstant(endOf(startsAt, durationMinutes)),
+        });
       }
     }
   }
 
   return slots;
+}
+
+/** When a meeting of `durationMinutes` that starts at `startsAt` ends. */
+export function endOf(startsAt: Date, durationMinutes: number): Date {
+  return new Date(startsAt.getTime() + durationMinutes * MINUTE_MS);
 }
 
 /** ISO 8601 in UTC without milliseconds: `2026-11-23T06:00:00Z`. */

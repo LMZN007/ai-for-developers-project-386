@@ -2,7 +2,15 @@ import { randomUUID } from "node:crypto";
 import type { components } from "@calls-booking/contract";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { ApiProblem, validationProblem } from "./errors.ts";
-import { formatInstant, freeSlots, isScheduledStart, type Slot } from "./schedule.ts";
+import {
+  endOf,
+  formatInstant,
+  freeSlots,
+  HORIZON_DAYS,
+  isScheduledStart,
+  SLOT_STEP_MINUTES,
+  type Slot,
+} from "./schedule.ts";
 import type { Booking, EventType, Store } from "./store.ts";
 
 type HealthStatus = components["schemas"]["HealthStatus"];
@@ -107,8 +115,7 @@ function toBooking(eventType: EventType, input: NewBooking, now: Date): Booking 
   if (!isScheduledStart(now, durationMinutes, startsAt)) {
     fields.push({
       field: "startsAt",
-      message:
-        "Это время недоступно: запись возможна в рабочие часы на ближайшие 14 дней с шагом 30 минут",
+      message: `Это время недоступно: запись возможна в рабочие часы на ближайшие ${HORIZON_DAYS} дней с шагом ${SLOT_STEP_MINUTES} минут`,
     });
   }
   const guestNameError = requiredTextError(guestName);
@@ -123,7 +130,7 @@ function toBooking(eventType: EventType, input: NewBooking, now: Date): Booking 
     id: randomUUID(),
     eventType: { slug, title, durationMinutes },
     startsAt: formatInstant(startsAt),
-    endsAt: formatInstant(new Date(startsAt.getTime() + durationMinutes * 60_000)),
+    endsAt: formatInstant(endOf(startsAt, durationMinutes)),
     guestName,
     guestEmail: input.guestEmail,
     ...(comment ? { comment } : {}),
@@ -142,7 +149,7 @@ function normalizeEventType(input: NewEventType): EventType {
   if (input.durationMinutes % DURATION_STEP_MINUTES !== 0) {
     fields.push({
       field: "durationMinutes",
-      message: "Длительность должна быть кратна 15 минутам",
+      message: `Длительность должна быть кратна ${DURATION_STEP_MINUTES} минутам`,
     });
   }
   if (fields.length > 0) {
