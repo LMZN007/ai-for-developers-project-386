@@ -60,20 +60,68 @@
 
 ## Стек
 
-- Разное
+| Часть         | Инструменты                                                                             |
+| ------------- | --------------------------------------------------------------------------------------- |
+| Язык          | TypeScript (strict) на Node.js 26                                                       |
+| Контракт API  | TypeSpec → OpenAPI 3.1 → SDK (openapi-typescript + openapi-fetch)                       |
+| Бекенд        | Fastify + fastify-openapi-glue (маршруты и валидация из OpenAPI)                        |
+| Фронтенд      | Vite + React + Mantine                                                                  |
+| Тесты         | Vitest                                                                                  |
+| Качество кода | Oxlint, oxfmt, jactionlint, проверка типов `tsc`                                        |
+| Окружение     | mise (версии, задачи, фоновые процессы), pnpm workspaces, hk (git-хуки), GitHub Actions |
+
+Проект построен по принципу contract-first: API описан в `packages/contract/main.tsp`, а сервер и клиент работают по сгенерированному из него OpenAPI.
+
+```
+apps/api/            бекенд (Fastify)
+apps/web/            фронтенд (Vite + React)
+packages/contract/   контракт TypeSpec и сгенерированный SDK
+```
 
 ## Установка
 
-<!-- Опишите установку: клонирование, зависимости, переменные окружения -->
+Нужны Git и [mise](https://mise.jdx.dev/getting-started.html). Node.js, pnpm и остальные инструменты mise поставит сам нужных версий из `mise.toml`.
 
 ```bash
 git clone https://github.com/LMZN007/ai-for-developers-project-386.git
 cd ai-for-developers-project-386
+mise trust
+mise install
 ```
+
+`mise install` ставит инструменты, затем автоматически устанавливает зависимости (`pnpm install`) и git-хуки. Переменные окружения настраивать не нужно: порты заданы в `mise.toml` (API — 3000, фронтенд — 5173).
 
 ## Использование
 
-<!-- Добавьте примеры запуска и запись asciinema — именно это смотрит работодатель -->
+Запустить приложение (бекенд и фронтенд работают в фоне):
+
+```bash
+mise run dev
+```
+
+Откройте http://localhost:5173. Проверить API напрямую: `curl http://localhost:3000/health`.
+
+Управление фоновыми серверами:
+
+```bash
+mise daemons ls          # состояние
+mise daemons logs api    # логи бекенда (или web)
+mise daemons stop        # остановить
+```
+
+Проверки и разработка:
+
+```bash
+mise run check       # все проверки — то же, что запускает CI
+mise run test        # тесты
+mise run lint        # линтер и проверка форматирования
+mise run format      # автоисправление форматирования
+mise run gen         # пересобрать OpenAPI и SDK после изменения контракта
+```
+
+Коммиты оформляются по [Conventional Commits](https://www.conventionalcommits.org/ru/) (`feat:`, `fix:`, `docs:` …) — это проверяет git-хук.
+
+<!-- Добавьте запись asciinema — именно это смотрит работодатель -->
 
 ---
 
