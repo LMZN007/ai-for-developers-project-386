@@ -20,7 +20,8 @@ export function buildApp({
   now = () => new Date(),
   fastify = {},
 }: AppOptions = {}) {
-  const app = Fastify(fastify);
+  // allErrors: report every invalid field at once, so a form can mark all of them.
+  const app = Fastify({ ajv: { customOptions: { allErrors: true } }, ...fastify });
   // Set before the routes are registered so the openapi-glue plugin inherits the handlers.
   registerErrorHandlers(app);
   app.register(openapiGlue, { specification, serviceHandlers: createHandlers({ store, now }) });

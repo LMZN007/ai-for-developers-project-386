@@ -1,13 +1,9 @@
-import { MemoryRouter } from "react-router";
-import App from "../src/App.tsx";
-import { render, screen, userEvent, within } from "../test-utils/index.ts";
+import { renderAt, stubApi } from "../test-utils/app.tsx";
+import { screen, userEvent, within } from "../test-utils/index.ts";
 
 // The pages call the real SDK; only the network underneath it is replaced.
 function respondWith(body: unknown, status = 200) {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async () => Response.json(body, { status })),
-  );
+  stubApi({ "GET /event-types": () => Response.json(body, { status }) });
 }
 
 beforeEach(() => {
@@ -17,14 +13,6 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
 });
-
-function renderAt(path: string) {
-  return render(
-    <MemoryRouter initialEntries={[path]}>
-      <App />
-    </MemoryRouter>,
-  );
-}
 
 test("главная рассказывает о сервисе и предлагает записаться", () => {
   renderAt("/");

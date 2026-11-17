@@ -19,6 +19,28 @@ model EventType {
   durationMinutes: int32;
 }
 
+/**
+ * What the owner sends to create an event type. The server also trims `title`
+ * and requires `durationMinutes` to be a multiple of 15.
+ */
+model NewEventType {
+  @minLength(1)
+  @maxLength(50)
+  @pattern("^[a-z0-9]+(-[a-z0-9]+)*$")
+  slug: string;
+
+  @minLength(1)
+  @maxLength(100)
+  title: string;
+
+  @maxLength(500)
+  description?: string;
+
+  @minValue(15)
+  @maxValue(240)
+  durationMinutes: int32;
+}
+
 model FieldError {
   /** Name of the request field the message is about. */
   field: string;
@@ -55,4 +77,20 @@ namespace EventTypes {
     @statusCode statusCode: 200;
     @body body: EventType[];
   };
+
+  /** Create an event type; its slug must be unused. */
+  @post
+  op create(@body body: NewEventType):
+    | {
+        @statusCode statusCode: 201;
+        @body body: EventType;
+      }
+    | {
+        @statusCode statusCode: 400;
+        @body body: ApiError;
+      }
+    | {
+        @statusCode statusCode: 409;
+        @body body: ApiError;
+      };
 }

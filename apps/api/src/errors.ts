@@ -1,7 +1,28 @@
 import type { components } from "@calls-booking/contract";
 import type { FastifyError, FastifyInstance, FastifySchemaValidationError } from "fastify";
 
-type ApiError = components["schemas"]["ApiError"];
+export type ApiError = components["schemas"]["ApiError"];
+type FieldError = components["schemas"]["FieldError"];
+
+/** A failure a handler reports on purpose; the error handler sends its body as is. */
+export class ApiProblem extends Error {
+  readonly statusCode: number;
+  readonly body: ApiError;
+
+  constructor(statusCode: number, body: ApiError) {
+    super(body.message);
+    this.statusCode = statusCode;
+    this.body = body;
+  }
+}
+
+export function validationProblem(fields: FieldError[]) {
+  return new ApiProblem(400, {
+    code: "validation_error",
+    message: "Проверьте поля запроса",
+    fields,
+  });
+}
 
 // Every error leaves the server in the single contract format `{ code, message, fields? }`.
 export function registerErrorHandlers(app: FastifyInstance) {
@@ -11,16 +32,13 @@ export function registerErrorHandlers(app: FastifyInstance) {
   });
 
   app.setErrorHandler((error: FastifyError, request, reply) => {
+    if (error instanceof ApiProblem) {
+      return reply.code(error.statusCode).send(error.body);
+    }
+
     if (error.validation) {
-      const body: ApiError = {
-        code: "validation_error",
-        message: "Проверьте поля запроса",
-        fields: error.validation.map((issue) => ({
-          field: fieldName(issue),
-          message: issue.message ?? "Некорректное значение",
-        })),
-      };
-      return reply.code(400).send(body);
+      const problem = validationProblem(firstPerField(error.validation.map(toFieldError)));
+      return reply.code(problem.statusCode).send(problem.body);
     }
 
     if (error.statusCode !== undefined && error.statusCode < 500) {
@@ -34,6 +52,18 @@ export function registerErrorHandlers(app: FastifyInstance) {
   });
 }
 
+// One value can break several schema rules (an empty slug fails both length and pattern);
+// a form shows one message per field, so keep the first.
+function firstPerField(fields: FieldError[]): FieldError[] {
+  return fields.filter(
+    (field, index) => fields.findIndex((other) => other.field === field.field) === index,
+  );
+}
+
+function toFieldError(issue: FastifySchemaValidationError): FieldError {
+  return { field: fieldName(issue), message: russianMessage(issue) };
+}
+
 // Ajv reports the field either in the path (`/guestEmail`) or, for a missing one, in params.
 function fieldName(issue: FastifySchemaValidationError): string {
   const missing = issue.params["missingProperty"];
@@ -41,4 +71,26 @@ function fieldName(issue: FastifySchemaValidationError): string {
     return missing;
   }
   return issue.instancePath.replace(/^\//, "").replaceAll("/", ".");
+}
+
+function russianMessage(issue: FastifySchemaValidationError): string {
+  const limit = issue.params["limit"];
+  switch (issue.keyword) {
+    case "required":
+      return "Обязательное поле";
+    case "minLength":
+      return limit === 1 ? "Обязательное поле" : `Не короче ${String(limit)} символов`;
+    case "maxLength":
+      return `Не длиннее ${String(limit)} символов`;
+    case "minimum":
+      return `Не меньше ${String(limit)}`;
+    case "maximum":
+      return `Не больше ${String(limit)}`;
+    case "pattern":
+      return "Недопустимый формат";
+    case "format":
+      return issue.params["format"] === "email" ? "Некорректный email" : "Недопустимый формат";
+    default:
+      return "Некорректное значение";
+  }
 }

@@ -7,6 +7,8 @@ export type EventType = components["schemas"]["EventType"];
 export interface Store {
   /** Event types in the order they were created. */
   listEventTypes(): EventType[];
+  /** Adds the event type unless its slug is already used; check and insert are one step. */
+  addEventType(eventType: EventType): "added" | "slug_taken";
 }
 
 export interface StoreContents {
@@ -18,5 +20,13 @@ export function createMemoryStore(initial: StoreContents = {}): Store {
 
   return {
     listEventTypes: () => eventTypes.map((eventType) => ({ ...eventType })),
+
+    addEventType(eventType) {
+      if (eventTypes.some((existing) => existing.slug === eventType.slug)) {
+        return "slug_taken";
+      }
+      eventTypes.push({ ...eventType });
+      return "added";
+    },
   };
 }
