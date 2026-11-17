@@ -4,7 +4,6 @@
   "include-component-in-tag": false,
   "bump-minor-pre-major": true,
   "initial-version": "0.1.0",
-  "bootstrap-sha": "1be8a6c5941856ab99c7dcfd8989bb47cc8dea1f",
   "packages": {
     ".": {}
   }
