@@ -35,3 +35,17 @@ apps/api: fastify-openapi-glue строит   ┘          apps/web: SDK createA
 - `packages/contract/generated/` не редактировать и не коммитить — он генерируется.
 - `.github/workflows/hexlet-check.yml` и `.github/workflows/README.md` принадлежат Хекслету: не менять, не переименовывать репозиторий.
 - Не отключать правила линтеров; исключение — только узкое (путь + правило) и с причиной.
+
+## Agent skills
+
+### Issue tracker
+
+Задачи хранятся в GitHub Issues репозитория LMZN007/ai-for-developers-project-386 (через `gh`). См. `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Стандартные метки: needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix. См. `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` в корне, решения в `docs/adr/`. См. `docs/agents/domain.md`.
