@@ -33,6 +33,7 @@ apps/api: fastify-openapi-glue строит   ┘          apps/web: SDK createA
 ## Правила
 
 - Коммиты — Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`, `test:`, `refactor:`; scope — `api`, `web`, `contract`). Проверяется хуком `commit-msg`.
+- Коммит, который выполняет тикет, ссылается на него номером в конце заголовка: `feat(api): запись на свободный слот (#14)`. GitHub превращает номер в ссылку, и по истории видно, какой коммит какую задачу делал.
 - `packages/contract/generated/` не редактировать и не коммитить — он генерируется.
 - `.github/workflows/hexlet-check.yml` и `.github/workflows/README.md` принадлежат Хекслету: не менять, не переименовывать репозиторий.
 - Версии и `CHANGELOG.md` ведёт release-please (Release PR после `feat`/`fix` в `main`): руками не править.
