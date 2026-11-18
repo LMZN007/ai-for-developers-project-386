@@ -126,7 +126,7 @@ mise run gen         # пересобрать OpenAPI и SDK после изме
 
 ## Деплой
 
-**Публичная ссылка:** _появится после первого деплоя_.
+**Публичная ссылка:** https://calls-booking-umck.onrender.com — страница записи [/book](https://calls-booking-umck.onrender.com/book), раздел владельца [/admin](https://calls-booking-umck.onrender.com/admin). Если сервис спал, первый запрос откроется примерно через минуту.
 
 Приложение работает в одном Docker-контейнере: один процесс Node отдаёт API (`/api/*`) и страницы, порт берёт из переменной `PORT`. Сервис описан в [`render.yaml`](render.yaml) (Render Blueprint): бесплатный тариф, регион Франкфурт, проверка здоровья по `/api/health`; новый коммит в `main` выкатывается только после зелёного CI.
 
