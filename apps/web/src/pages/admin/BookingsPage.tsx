@@ -1,5 +1,6 @@
 import type { components } from "@calls-booking/contract";
-import { Loader, Table, Text, Title } from "@mantine/core";
+import { Card, Loader, Stack, Table, Text, Title, em } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import { api } from "../../api.ts";
 import { browserTimeZone, intervalLabel } from "../../browserTime.ts";
 import LoadFailed from "../../LoadFailed.tsx";
@@ -26,16 +27,49 @@ export default function BookingsPage() {
           Предстоящих записей нет
         </Text>
       )}
-      {state.status === "loaded" && state.data.length > 0 && (
-        <BookingsTable bookings={state.data} />
-      )}
+      {state.status === "loaded" && state.data.length > 0 && <BookingsList bookings={state.data} />}
     </>
+  );
+}
+
+// Mantine's "sm" breakpoint: below it the five table columns do not fit the screen.
+const PHONE_QUERY = `(max-width: ${em(767)})`;
+
+function BookingsList({ bookings }: { bookings: Booking[] }) {
+  // Read on the first render, so a phone never flashes the table.
+  const isPhone = useMediaQuery(PHONE_QUERY, false, { getInitialValueInEffect: false });
+
+  return isPhone ? <BookingCards bookings={bookings} /> : <BookingsTable bookings={bookings} />;
+}
+
+// On a phone every field stays visible: a card per booking instead of a wide table.
+function BookingCards({ bookings }: { bookings: Booking[] }) {
+  return (
+    <Stack
+      component="ul"
+      aria-label="Предстоящие записи"
+      mt="xl"
+      p={0}
+      gap="sm"
+      style={{ listStyle: "none" }}
+    >
+      {bookings.map((booking) => (
+        <Card component="li" key={booking.id} withBorder padding="md">
+          <Title order={2} size="h4">
+            {intervalLabel(booking)}
+          </Title>
+          <Text mt="xs">Тип встречи: {booking.eventType.title}</Text>
+          <Text>Имя: {booking.guestName}</Text>
+          <Text style={{ overflowWrap: "anywhere" }}>Email: {booking.guestEmail}</Text>
+          <Text>Комментарий: {booking.comment ?? "—"}</Text>
+        </Card>
+      ))}
+    </Stack>
   );
 }
 
 function BookingsTable({ bookings }: { bookings: Booking[] }) {
   return (
-    // On a phone the table scrolls sideways inside its own block, not the whole page.
     <Table.ScrollContainer minWidth={720} mt="xl">
       <Table striped highlightOnHover verticalSpacing="sm">
         <Table.Thead>

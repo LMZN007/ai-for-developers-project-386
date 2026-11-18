@@ -83,3 +83,39 @@ test("при ошибке загрузки записей предлагает �
 
   expect(await screen.findByRole("cell", { name: "Иван Петров" })).toBeInTheDocument();
 });
+
+test("на телефоне записи показаны карточками, и все поля видны без прокрутки вбок", async () => {
+  stubPhoneScreen();
+  stubApi({ "GET /bookings": () => Response.json([consultation, deepDive]) });
+  renderAt("/admin/bookings");
+
+  const list = await screen.findByRole("list", { name: "Предстоящие записи" });
+  expect(screen.queryByRole("table")).not.toBeInTheDocument();
+
+  const [first, second] = within(list).getAllByRole("listitem");
+  expect(
+    within(first!).getByRole("heading", { name: "Среда, 25 ноября, 11:30–12:00" }),
+  ).toBeInTheDocument();
+  for (const text of [
+    "Тип встречи: Консультация",
+    "Имя: Иван Петров",
+    "Email: ivan@example.com",
+    "Комментарий: Хочу обсудить проект",
+  ]) {
+    expect(within(first!).getByText(text)).toBeInTheDocument();
+  }
+  expect(within(second!).getByText("Комментарий: —")).toBeInTheDocument();
+});
+
+// Mantine's useMediaQuery reads window.matchMedia; a narrow screen matches the "max-width" query.
+function stubPhoneScreen() {
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn().mockImplementation((query: string) => ({
+      matches: query.includes("max-width"),
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })),
+  );
+}
