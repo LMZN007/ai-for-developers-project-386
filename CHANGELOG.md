@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.0](https://github.com/LMZN007/ai-for-developers-project-386/compare/v0.1.1...v0.2.0) (2026-11-18)
+
+
+### Features
+
+* Docker image and Render deploy setup ([#23](https://github.com/LMZN007/ai-for-developers-project-386/issues/23)) ([#24](https://github.com/LMZN007/ai-for-developers-project-386/issues/24)) ([5b2f83b](https://github.com/LMZN007/ai-for-developers-project-386/commit/5b2f83b308bdf894440a5881306573dbce14125c))
+* **web:** show bookings as cards on a phone ([#26](https://github.com/LMZN007/ai-for-developers-project-386/issues/26)) ([c6c1a89](https://github.com/LMZN007/ai-for-developers-project-386/commit/c6c1a8913897fc6a0222a8839df538aed59e6c49))
+
 ## [0.1.1](https://github.com/LMZN007/ai-for-developers-project-386/compare/v0.1.0...v0.1.1) (2026-11-17)
 
 
