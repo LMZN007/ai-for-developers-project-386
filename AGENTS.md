@@ -8,8 +8,9 @@
 
 - `mise install` — поставить инструменты; хук `postinstall` сам выполнит `mise run setup` (pnpm install и git-хуки hk).
 - `mise run dev` — API (:3000) и web (:5173) в фоне как daemons; `mise daemons ls | logs api | stop`.
+- `mise run start` — как в продакшене: сборка web и один сервер на `PORT` для API и страниц.
 - `mise run check` — все проверки (oxfmt, oxlint, jactionlint, gen, typecheck, test, e2e). CI вызывает ту же команду. Запускать перед завершением задачи. Хук `pre-push` делает то же, но без e2e.
-- `mise run e2e` — браузерный сценарий (Playwright, Chromium) с настоящим сервером на портах 3100/4173; Chromium ставит `mise run setup`.
+- `mise run e2e` — браузерный сценарий (Playwright, Chromium) с настоящим продакшен-сервером на порту 3100 (пустое хранилище); `E2E_BASE_URL=<адрес>` — тот же сценарий против уже запущенного сервиса. Chromium ставит `mise run setup`.
 - `mise run lint`, `mise run format`, `mise run typecheck`, `mise run test` — по отдельности.
 - `mise run gen` — пересобрать OpenAPI и SDK из контракта.
 - Один тест: `pnpm --filter @calls-booking/api exec vitest run -t "<имя теста>"`.
@@ -27,7 +28,7 @@ apps/api: fastify-openapi-glue строит   ┘          apps/web: SDK createA
 
 - API меняется только через `main.tsp`, затем `mise run gen`.
 - Обработчики — `apps/api/src/handlers.ts`; имя метода = `operationId` из OpenAPI (например, `Health_check`).
-- Web ходит в API только через SDK по `/api/*`; в dev Vite проксирует на :3000.
+- API отвечает по префиксу `/api` (пути контракта — без него). Web ходит в API только через SDK по `/api/*`; в dev Vite проксирует `/api` на :3000, в продакшене (`mise run start`, Docker) тот же сервер отдаёт и API, и собранные страницы (`WEB_ROOT`), порт — из `PORT`.
 - Дымовой тест `apps/api/test/smoke.test.ts` поднимает сервер и вызывает его через SDK.
 - Термины `GLOSSARY.md` в коде и контракте называются по-английски: Тип встречи — `EventType`, Слот — `Slot`, Запись — `Booking`, Гость — поля `guest*`, Конфликт — ответ 409 `time_conflict`; Доступность и Горизонт записи — константы в `apps/api/src/schedule.ts`. Это имена кода, а не синонимы из списков _Avoid_: в текстах интерфейса и в обсуждении — только русские термины глоссария.
 
